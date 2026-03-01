@@ -1,0 +1,506 @@
+"<!DOCTYPE html>
+<html lang=""en"">
+<head>
+    <meta charset=""UTF-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes"">
+    <title>仓位管理 · 扫码表格</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+        }
+        body {
+            background: #f4f5f7;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 8px;
+        }
+        .app-container {
+            width: 100%;
+            max-width: 1200px;
+            background: white;
+            border-radius: 28px 28px 24px 24px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+            overflow: hidden;
+            border: 1px solid #e9edf2;
+        }
+        /* 顶部时间栏 模仿截图中的 11:47 和 sheet 标签 */
+        .status-bar {
+            background: #fefefe;
+            padding: 12px 20px 6px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #e2e6ea;
+            font-size: 15px;
+            font-weight: 500;
+            color: #1e293b;
+        }
+        .time-badge {
+            background: #f1f4f9;
+            padding: 4px 12px;
+            border-radius: 40px;
+            font-size: 15px;
+            letter-spacing: 0.3px;
+        }
+        .sheet-tabs {
+            display: flex;
+            gap: 2px;
+            background: #ffffff;
+            padding: 0 16px;
+        }
+        .sheet-tab {
+            padding: 8px 24px 8px 24px;
+            background: #f8fafc;
+            border: 1px solid #dee4ec;
+            border-bottom: none;
+            border-radius: 12px 12px 0 0;
+            font-weight: 500;
+            color: #3f4a5a;
+            font-size: 15px;
+            margin-right: 4px;
+            cursor: default;
+            box-shadow: 0 -1px 2px rgba(0,0,0,0.02);
+        }
+        .sheet-tab.active {
+            background: white;
+            border-bottom: 2px solid #2563eb;
+            color: #1e40af;
+            font-weight: 600;
+            z-index: 2;
+            transform: translateY(1px);
+        }
+        /* 表格区域 */
+        .table-wrapper {
+            padding: 16px 20px 20px 20px;
+            background: white;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 18px;
+            border-style: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+            font-size: 15px;
+            min-width: 500px;
+        }
+        th {
+            background: #f7f9fc;
+            font-weight: 600;
+            color: #1e2a3a;
+            border-bottom: 2px solid #cdd9e9;
+            padding: 14px 8px;
+            text-align: left;
+            border-right: 1px solid #e2e8f0;
+        }
+        td {
+            padding: 12px 8px;
+            border-bottom: 1px solid #e9edf3;
+            border-right: 1px solid #eef2f6;
+            color: #1f2a41;
+            vertical-align: middle;
+        }
+        th:last-child, td:last-child {
+            border-right: none;
+        }
+        /* 列字母提示小字 */
+        .col-sub {
+            font-size: 12px;
+            font-weight: 400;
+            color: #64748b;
+            margin-left: 6px;
+        }
+        /* 扫码录入卡片 */
+        .scan-panel {
+            background: #f8fafd;
+            padding: 20px 24px 24px 24px;
+            border-top: 1px solid #dde3ec;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            gap: 20px;
+        }
+        .input-group {
+            flex: 3 1 280px;
+            min-width: 240px;
+        }
+        .input-group label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            color: #2c3e5c;
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+        .input-group label span {
+            background: #2563eb10;
+            padding: 5px 10px;
+            border-radius: 30px;
+            font-size: 13px;
+            color: #2563eb;
+            font-weight: 500;
+        }
+        .scan-input-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            background: white;
+            border: 1px solid #cad5e2;
+            border-radius: 60px;
+            padding: 4px 4px 4px 18px;
+            transition: 0.15s;
+        }
+        .scan-input-row:focus-within {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px #2563eb30;
+        }
+        .scan-input-row input {
+            flex: 1;
+            border: none;
+            padding: 12px 6px 12px 0;
+            font-size: 16px;
+            background: transparent;
+            outline: none;
+            color: #1e293b;
+        }
+        .scan-input-row button {
+            background: #2563eb;
+            border: none;
+            border-radius: 50px;
+            padding: 10px 22px;
+            color: white;
+            font-weight: 600;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            border: 1px solid #2563eb;
+            transition: 0.1s;
+            white-space: nowrap;
+        }
+        .scan-input-row button:hover {
+            background: #1d4ed8;
+        }
+        .scan-input-row button:active {
+            transform: scale(0.97);
+        }
+        .mock-qr-hint {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+            background: #eef4ff;
+            border-radius: 40px;
+            padding: 6px 18px 6px 14px;
+            font-size: 14px;
+            color: #1e3a8a;
+            border: 1px dashed #3b82f6;
+        }
+        .mock-qr-hint i {
+            font-style: normal;
+            background: white;
+            padding: 4px 12px;
+            border-radius: 30px;
+            font-weight: 500;
+        }
+        .clear-btn {
+            background: white;
+            border: 1px solid #b3c6df;
+            border-radius: 40px;
+            padding: 9px 25px;
+            font-weight: 500;
+            color: #415a77;
+            cursor: pointer;
+            transition: 0.1s;
+            font-size: 14px;
+            margin-left: auto;
+        }
+        .clear-btn:hover {
+            background: #ecf2fa;
+        }
+        .footer-note {
+            padding: 8px 24px 16px 24px;
+            font-size: 13px;
+            color: #6b7b93;
+            background: #ffffff;
+            border-top: 1px solid #eef3f9;
+            display: flex;
+            justify-content: space-between;
+        }
+    </style>
+</head>
+<body>
+<div class=""app-container"">
+    <!-- 顶部：11:47 + sheet1 2 3 -->
+    <div class=""status-bar"">
+        <div class=""time-badge"">11:47</div>
+        <div style=""display: flex; gap: 5px;"">
+            <span style=""color:#1e293b;"">🐾 仓位管理</span>
+        </div>
+    </div>
+    <div style=""padding-left:20px;"">
+        <div class=""sheet-tabs"">
+            <span class=""sheet-tab active"">Sheet1</span>
+            <span class=""sheet-tab"">Sheet2</span>
+            <span class=""sheet-tab"">Sheet3</span>
+        </div>
+    </div>
+
+    <!-- 表格主体： A(仓位) B(编码) C(名称)  从第2行开始填充 -->
+    <div class=""table-wrapper"">
+        <table id=""dataTable"">
+            <thead>
+            <tr>
+                <th>A <span class=""col-sub"">仓位</span></th>
+                <th>B <span class=""col-sub"">编码</span></th>
+                <th>C <span class=""col-sub"">名称</span></th>
+                <th>D</th>
+                <th>E</th>
+                <th>F</th>
+            </tr>
+            </thead>
+            <tbody id=""tableBody"">
+            <!-- 动态生成36行，但为了效果我们生成36行，默认空白，只展示填入的行 ? 也可以固定显示空白行  但是为了对齐，直接填充占位 -->
+            <!-- 通过js生成 行号 1..36 并绑定数据存储 -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 扫码录入区域 + 示例说明 -->
+    <div class=""scan-panel"">
+        <div class=""input-group"">
+            <label>
+                📷 扫描/粘贴二维码内容
+                <span>二维码格式: 仓位X-X 编码XXXX 名称XXXX</span>
+            </label>
+            <div class=""scan-input-row"">
+                <input type=""text"" id=""qrInput"" placeholder=""例如 仓位A-1 编码12345 名称前杠"" autofocus>
+                <button id=""scanBtn"">↵ 填入表格</button>
+            </div>
+        </div>
+        <div class=""mock-qr-hint"">
+            <i>⬇️ 模拟扫码</i>
+            <span>仓位A-1 编码12345 名称前杠</span>
+            <span style=""font-size:12px; color:#2563eb;"">(点上面按钮自动拆分)</span>
+        </div>
+        <button class=""clear-btn"" id=""clearRowBtn"">清空当前行</button>
+    </div>
+
+    <!-- 提示行：编码规则说明 -->
+    <div class=""footer-note"">
+        <span>✅ 自动归列规则：第一项“仓位...”→ A列，第二项“编码...”→ B列，第三项“名称...”→ C列。 扫码后追加到第一个空白行 (从A2开始)</span>
+        <span style=""font-family: monospace;"">⬇️ 点表格单元格可直接编辑</span>
+    </div>
+</div>
+
+<script>
+    (function() {
+        // 总显示行数 (与图片一致: 从1到36行, 但行号1是标题下面的数据行索引0对应行2, 所以数组从2开始)
+        const MAX_ROW = 36;      // 行2 ~ 行36 (实际上表格显示行2到行36, 共35行数据? 但从图片看第一行标题下是空白行2开始，我们显示35行(2..36)但也可以显示到36 共35行。为了整齐，采用35行)
+        // 但是我们希望显示行号从1到36 但第1行是标题，数据行从2开始至36共35行。也可以。不影响。
+
+        // 存储数据: 二维数组，索引0代表表格第二行 (即A2)
+        let tableData = [];
+        for (let i = 0; i < MAX_ROW; i++) {
+            tableData[i] = ['', '', '', '', '', ''];   // 六列 A B C D E F
+        }
+
+        // 获取表格body
+        const tbody = document.getElementById('tableBody');
+        const qrInput = document.getElementById('qrInput');
+        const scanBtn = document.getElementById('scanBtn');
+        const clearBtn = document.getElementById('clearRowBtn');
+
+        // 渲染表格 (根据tableData)
+        function renderTable() {
+            let htmlStr = '';
+            // 行号从2开始到36 (i=0 对应行2)
+            for (let r = 0; r < MAX_ROW; r++) {
+                let rowNumber = r + 2;  // 第二行开始
+                htmlStr += '<tr>';
+                for (let c = 0; c < 6; c++) {
+                    let colLetter = String.fromCharCode(65 + c); // A,B,C,D,E,F
+                    // 添加editable属性，让用户可以直接修改单元格内容，并同步回tableData
+                    htmlStr += `<td contenteditable=""true"" data-row=""${r}"" data-col=""${c}"" data-original=""${colLetter}"">${escapeHtml(tableData[r][c])}</td>`;
+                }
+                htmlStr += '</tr>';
+            }
+            tbody.innerHTML = htmlStr;
+        }
+
+        // 简单转义避免XSS (但contenteditable显示原文)
+        function escapeHtml(unsafe) {
+            if (!unsafe) return '';
+            return unsafe
+                .replace(/&/g, ""&amp;"")
+                .replace(/</g, ""&lt;"")
+                .replace(/>/g, ""&gt;"")
+                .replace(/""/g, ""&quot;"")
+                .replace(/'/g, ""&#039;"");
+        }
+
+        // 更新表格数据从contenteditable事件 (双向绑定)
+        function attachCellEvents() {
+            const cells = tbody.querySelectorAll('td[contenteditable=""true""]');
+            cells.forEach(cell => {
+                cell.addEventListener('input', function(e) {
+                    const row = parseInt(this.dataset.row);
+                    const col = parseInt(this.dataset.col);
+                    if (!isNaN(row) && !isNaN(col) && row >= 0 && row < MAX_ROW && col >=0 && col <6) {
+                        tableData[row][col] = this.innerText;   // 同步到存储
+                    }
+                });
+                // 也监听blur, 但input已足够
+                cell.addEventListener('blur', function() {
+                    // 确保数据一致 (可选)
+                });
+            });
+        }
+
+        // 刷新表格并保留事件
+        function refreshTable() {
+            renderTable();
+            attachCellEvents();
+        }
+
+        // 根据二维码字符串解析，返回 { locationCode, idCode, nameCode } 或 null
+        function parseQrContent(qrStr) {
+            if (!qrStr || qrStr.trim() === '') return null;
+            const trimmed = qrStr.trim();
+            // 使用正则提取: 仓位(\S+) 编码(\S+) 名称(\S+)
+            // 允许各种分隔符(空格/斜杠等) 但按照示例格式： ""仓位A-1 编码12345 名称前杠""
+            const locationMatch = trimmed.match(/仓位([^\s]+)/);
+            const idMatch = trimmed.match(/编码([^\s]+)/);
+            const nameMatch = trimmed.match(/名称([^\s]+)/);
+
+            if (!locationMatch && !idMatch && !nameMatch) {
+                // 如果完全不匹配，可以尝试按空格拆分启发式，但这里按严格要求提示用户
+                alert('未识别到“仓位”、“编码”、“名称”关键词，请确保格式如：仓位A-1 编码12345 名称前杠');
+                return null;
+            }
+
+            return {
+                locationCode: locationMatch ? locationMatch[1].trim() : '',
+                idCode: idMatch ? idMatch[1].trim() : '',
+                nameCode: nameMatch ? nameMatch[1].trim() : ''
+            };
+        }
+
+        // 查找第一个空白行 (A列,B列,C列同时为空？ 但可能部分列有数据，但我们默认该行A B C全部为空才视为空白，避免覆盖已有项)
+        function findFirstEmptyRow() {
+            for (let i = 0; i < MAX_ROW; i++) {
+                // 如果A列 B列 C列 全部为空字符串，则认为是空行
+                if (tableData[i][0] === '' && tableData[i][1] === '' && tableData[i][2] === '') {
+                    return i;
+                }
+            }
+            return -1; // 表格满了
+        }
+
+        // 将解析后的数据填入指定行（row索引）
+        function fillDataToRow(rowIndex, data) {
+            if (rowIndex < 0 || rowIndex >= MAX_ROW) return false;
+            if (data.locationCode) tableData[rowIndex][0] = data.locationCode;
+            if (data.idCode) tableData[rowIndex][1] = data.idCode;
+            if (data.nameCode) tableData[rowIndex][2] = data.nameCode;
+            refreshTable();  // 重新渲染并绑定事件
+            return true;
+        }
+
+        // 处理扫码输入主逻辑
+        function handleScanInput() {
+            const raw = qrInput.value.trim();
+            if (raw === '') {
+                alert('请输入或扫描二维码内容');
+                return;
+            }
+
+            const parsed = parseQrContent(raw);
+            if (!parsed) return;
+
+            // 检查是否有至少一个字段解析出内容
+            if (!parsed.locationCode && !parsed.idCode && !parsed.nameCode) {
+                alert('未能从输入中提取有效信息，请检查格式');
+                return;
+            }
+
+            const emptyRow = findFirstEmptyRow();
+            if (emptyRow === -1) {
+                alert('当前表格从第2行到第36行已满，请手动清空一些行');
+                return;
+            }
+
+            fillDataToRow(emptyRow, parsed);
+            qrInput.value = '';   // 清空输入框，准备下一扫
+            qrInput.focus();
+        }
+
+        // 清空当前“选中”或最后一行？ 简单实现: 清空第一个非空行？为了避免歧义，增加一个清空最近填写行的功能不容易，改成清空最末一个非空行(根据行号由大到小)
+        // 但用户可能想清空特定行，我们可以提供一个“清空最后一行”或让用户手动删除单元格。但按钮叫“清空当前行”，我们可以先定义当前行为最后扫码填入的行？
+        // 简化实现： 清空表格中最后一条有数据的行 (即行号最大且A或B或C非空)
+        function clearLastNonEmptyRow() {
+            for (let i = MAX_ROW - 1; i >= 0; i--) {
+                if (tableData[i][0] !== '' || tableData[i][1] !== '' || tableData[i][2] !== '') {
+                    // 清空该行全部六列
+                    tableData[i] = ['', '', '', '', '', ''];
+                    refreshTable();
+                    return;
+                }
+            }
+            alert('表格已是空的');
+        }
+
+        // 初始渲染
+        refreshTable();
+
+        // 监听扫码按钮
+        scanBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            handleScanInput();
+        });
+
+        // 允许回车键快速提交
+        qrInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleScanInput();
+            }
+        });
+
+        // 清空当前行按钮 (逻辑: 清空最后一个非空行)
+        clearBtn.addEventListener('click', function() {
+            clearLastNonEmptyRow();
+        });
+
+        // 额外: 点击模拟扫码快速填入示例 (小贴士非按钮, 但可以点击那条mock文字？为了方便，在模拟扫码区添加隐藏按钮？ 但可以用单击填入输入框)
+        const mockHint = document.querySelector('.mock-qr-hint');
+        mockHint.style.cursor = 'pointer';
+        mockHint.addEventListener('click', function() {
+            qrInput.value = '仓位A-1 编码12345 名称前杠';
+            qrInput.focus();
+        });
+
+        // 也支持手动修改表格后同步存储，已经通过input事件完成
+
+        // 初始化一些示例数据(可选，为了展示效果可以预置两行，但不强制)
+        // 可以预填一行样例，方便观察:
+        setTimeout(() => {
+            // 预填一行数据(仅展示，不覆盖已有)
+            if (tableData[0][0] === '' && tableData[0][1] === '' && tableData[0][2] === '') {
+                tableData[0][0] = 'A-1';
+                tableData[0][1] = '12345';
+                tableData[0][2] = '前杠';
+                refreshTable();
+            }
+        }, 100);
+    })();
+</script>
+</body>
+</html>"
